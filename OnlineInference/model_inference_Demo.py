@@ -59,6 +59,8 @@ Tensor = torch.cuda.FloatTensor
 ### Create Folder ### 
 createFolder('./violation') # for save violation car
 
+frame_num = 20
+
 def fun_capture_fileapth(folder_path1, folder_path2):
     filename_path1=[]
     filename_path2=[]
@@ -120,7 +122,7 @@ def fun_load_od_model(checkpoint_path):
     return model_od
 
 def thread_detect(model_od, frame_pil_img, q_detect):
-    _, bboxes = detect(model_od, frame_pil_img, min_score=0.65, max_overlap=0.5, top_k=50,device=device)
+    _, bboxes = detect(model_od, frame_pil_img, min_score=0.7, max_overlap=0.5, top_k=50,device=device)
     q_detect.put(bboxes)
 
 def thread_seg_models(model_seg_road, model_seg_lane ,frame_pil_img, q_sed):
@@ -147,6 +149,8 @@ size = (int(videoCapture1.get(cv2.CAP_PROP_FRAME_WIDTH)/1),
 img_stack = []
 violation_frame = -1
 c=0
+check_frame = 0 
+vio = False
 
 ############################ SORT ######################################
 from src.sort import Sort
@@ -240,8 +244,7 @@ for c_time, tmp_time in enumerate(partial_inference_video):
                         break
 
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
-            frame_num = 20
-            violation_frame,img_stack = save_violation(violation_frame,img_stack,img_result,frame_num)
+            violation_frame,img_stack,check_frame,vio = save_violation(violation_frame,img_stack,img_result,frame_num,check_frame,vio)
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
             
             print('  > track and save time : {}s'.format(time.time() - track_save_time))
