@@ -376,6 +376,16 @@ def fun_detection_TrafficViolation(img, bboxes, map_seg_label_line, map_seg_labe
                     decision_box['decision'] = 'Violation_parking_in_redline'
                     decision_box['bbox'] = bbox
                     img_result = plot_bbox_Violation(img_result, bbox,(255,0,0))
+                    
+                else:
+                    '''
+                    沒被規範到的預設為pass
+                    '''
+                    decision_box['decision'] = 'pass'
+                    decision_box['bbox'] = bbox
+                    img_result = plot_bbox(img_result, bbox)
+                decision_boxes.append(decision_box)
+                """
                 elif ((n_bus_line > n_car_line) & (n_bus_line > n_motor_line)) & (n_bus_line>=100) &\
                      ((object_label=='b') | (object_label=='t') | (object_label=='m') | (object_label=='c')):
                     '''
@@ -387,15 +397,9 @@ def fun_detection_TrafficViolation(img, bboxes, map_seg_label_line, map_seg_labe
                     decision_box['decision'] = 'Violation_parking_in_redline'
                     decision_box['bbox'] = bbox
                     img_result = plot_bbox_Violation(img_result, bbox,(255,0,255))
+                """
                 
-                else:
-                    '''
-                    沒被規範到的預設為pass
-                    '''
-                    decision_box['decision'] = 'pass'
-                    decision_box['bbox'] = bbox
-                    img_result = plot_bbox(img_result, bbox)
-                decision_boxes.append(decision_box)
+                
             else:
                 '''
                 沒在ROI內的
