@@ -6,8 +6,6 @@ import numpy as np
 
 def save_violation(violation_frame,img_stack,img_result,frame_num):
     if violation_frame != -1 :
-        global im_name
-        global plate_word
         img_stack.append(img_result)
         f = frame_num
         index = [0,f//2,f,int(f*1.5),f*2]
