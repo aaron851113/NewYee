@@ -24,7 +24,6 @@ from src.model_inference_Segmentation_noplot import evaluateModel, evaluateModel
 from src.fun_plotfunction import  plot_ROI, plot_bbox_Violation, plot_bbox
 from src.fun_modify_seg import fun_intergate_seg_LaneandRoad
 from src.violation_demo import save_violation, createFolder
-from charnet.config import cfg
 
 """
 #################### 載入偵測車牌charnet的cfg&Model #######################
@@ -44,8 +43,8 @@ filepath_model_seg_LaneLine = './models/ESPNet_Line_mytransfrom_full_256_512_wei
 filepath_model_seg_road = './models/ESPNet_road_mytransfrom_full_256_512_weights_epoch_41.pth'
 # Load Object Detection model
 checkpoint_path = './models/od_NoPretrain/BEST_checkpoint.pth.tar'
-video_path='../../data/(Front)IPCamera_20200305095701_p000.avi'
-savefilename='(Front)IPCamera_20200305095701_p000'
+video_path='../../data/(Front)IPCamera_20200305095701_p001.avi'
+savefilename='(Front)IPCamera_20200305095701_p001'
 
 video_t_start = 0 # unit: second
 video_t_end = 60 # unit: second
@@ -147,6 +146,7 @@ size = (int(videoCapture1.get(cv2.CAP_PROP_FRAME_WIDTH)/1),
         int(videoCapture1.get(cv2.CAP_PROP_FRAME_HEIGHT)/1))
 
 img_stack = []
+bbox_stack = []
 violation_frame = -1
 c=0
 check_frame = 0 
@@ -228,8 +228,8 @@ for c_time, tmp_time in enumerate(partial_inference_video):
                 for x1, y1, x2, y2, obj_id , cls_pred in tracked_objects:
                     cls = vehicle[int(cls_pred)]
                     #print('x1, y1, x2, y2, obj_id :',x1, y1, x2, y2, obj_id)
-                    img_result = cv2.UMat(img_result)
-                    cv2.putText(img_result, cls + ":" + str(int(obj_id)),(int(x1+30), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 3)
+                    #img_result = cv2.UMat(img_result)
+                    #cv2.putText(img_result, cls + ":" + str(int(obj_id)),(int(x1+30), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 3)
             ############################ SORT ######################################
                     
             # save img_result
@@ -244,7 +244,7 @@ for c_time, tmp_time in enumerate(partial_inference_video):
                         break
 
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
-            violation_frame,img_stack,check_frame,vio = save_violation(violation_frame,img_stack,img_result,frame_num,check_frame,vio)
+            violation_frame,img_stack,bbox_stack = save_violation(violation_frame,decision_boxes,img_stack,bbox_stack,img_result,frame_num)
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
             
             print('  > track and save time : {}s'.format(time.time() - track_save_time))
