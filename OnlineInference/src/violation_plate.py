@@ -3,37 +3,33 @@ import os
 import torch
 import time
 import numpy as np
-from charnet.config import cfg
+
+from src.inference_rec_model import recognition_plate
 
 plate_word = ''
 im_name = ''
-def save_violation(bbox_stack,match_bbox,cfg,charnet,violation_frame,violation_id,violation_id_satck,img_stack,img_result,frame_num):
-    if len(img_stack) >= frame_num *2:
-        img_stack = img_stack[1:]
-        img_stack.append(img_result) #只保留最新frame_num筆img_result
-        bbox_stack = bbox_stack[1:] 
-        bbox_stack.append(match_bbox)
-    else:   
-        img_stack.append(img_result)
-        bbox_stack.append(match_bbox)
-    
+
+def save_violation(bbox_stack,match_bbox,violation_frame,violation_id,img_stack,img_result,frame_num):
     if violation_frame != -1 :
         global im_name
         global plate_word
+        img_stack.append(img_result)
+        bbox_stack.append(match_bbox)
         f = frame_num
-        index = [0,f//2,f,int(f*1.5),f*2-1]
-        vio_objid = []
-        if len(img_stack) == f*2 : 
+        index = [0,f//2,f,int(f*1.5),f*2]
+        # 且湊滿frame_num*2張frame，更改旗標，清空
+        if len(img_stack) == f*2+1 :
             tmp_path = './violation/'+str(violation_frame)+'/'
+            tmp_plate_list = []
+            #for i in range(len(img_stack)):
             for i in index :
                 save_index = violation_frame-f+i
                 img_path = tmp_path + str(save_index)+'.png'
                 im_name = str(violation_frame)
                 cv2.imwrite(img_path,img_stack[i])
-            
-            for i in range(len(bbox_stack)):
-                #車牌辨識##############charnet##########
-                charnet.cuda()
+                
+                ############################車牌辨識#####################################
+                #裁切圖片再丟進去辨識
                 xmin = 0
                 ymin = 0
                 xmax = 0
@@ -44,38 +40,55 @@ def save_violation(bbox_stack,match_bbox,cfg,charnet,violation_frame,violation_i
                         ymin = int(bbox_stack[i][num][2])
                         xmax = int(bbox_stack[i][num][3])
                         ymax = int(bbox_stack[i][num][4])
-                       
-                #裁切圖片再丟進去辨識
+                        break
+
                 if xmin > 0 :
                     print('find_plate_frame :',i,"  Place:",xmin,ymin,xmax,ymax)
-                    im_result = img_stack[i][ymin:ymax,xmin:xmax]
+                    im_result = img_stack[i][ymin:ymax,xmin:xmax] #im_result == car plate img
                     img_path2 = tmp_path + '_' + str(i)+'.png'
                     cv2.imwrite(img_path2,im_result)
-                    im, scale_w, scale_h, original_w, original_h = resize(im_result, size=cfg.INPUT_SIZE)
+                    
                     start_time = time.time()
-                    with torch.no_grad():
-                        char_bboxes, char_scores, word_instances = charnet(im, scale_w, scale_h, original_w, original_h)
-                        plate_word = save_word_recognition(
-                                word_instances, im_name,
-                                "./charnet_result", cfg.RESULTS_SEPARATOR
-                            )
+                    plate_word = recognition_plate(im_result)
                     #draw the box and result
-                    #draw_box_word(im_name,im_result,"./charnet_result")  
                     print("--- %s seconds ---" % (time.time() - start_time))
-
-                #########################
-            print('==>>>>>>  Sucess save Violation Image folder : ',violation_frame,"in",im_name)
+                    print("license number -----> ",plate_word)
+                    tmp_plate_list.append(plate_word)
+            
+            ###取最長的string為車牌
+            plate_word = tmp_plate_list[0]
+            for i in range(1,len(tmp_plate_list)):
+                if len(tmp_plate_list[i])>len(plate_word):
+                    plate_word = tmp_plate_list[i]
+            
+            print('Sucessfully save Violation Image folder : ',violation_frame,"in",im_name)
+            #print("license number -----> ",plate_word)
+            
+            f = frame_num*-1
+            img_stack = img_stack[f:]
+            bbox_stack = bbox_stack[f:]
             violation_frame = -1
-            violation_id_satck.append(violation_id)
             violation_id = 0
-            print("license number ------------>",plate_word)
         #########change dir name
         for folder_name in os.listdir('./violation'):
             if folder_name == im_name and len(plate_word) > 0:
-                if not os.path.isdir('./violation/{}'.format(plate_word)):
-                    os.rename('./violation/{}'.format(im_name),'./violation/{}'.format(plate_word))
+                os.rename('./violation/{}'.format(im_name),'./violation/{}'.format(plate_word))
         
-    return violation_frame,violation_id,violation_id_satck,img_stack,bbox_stack
+    # 如果沒有違規        
+    else : 
+        if len(img_stack) < frame_num :
+            img_stack.append(img_result)
+            bbox_stack.append(match_bbox)
+        else:
+            f = (frame_num*-1)+1
+            img_stack = img_stack[f:]
+            bbox_stack = bbox_stack[f:]
+            img_stack.append(img_result) #只保留最新frame_num筆img_result
+            bbox_stack.append(match_bbox)
+    return violation_frame,violation_id,img_stack,bbox_stack
+
+
+
     
 def createFolder(directory):
     try:
