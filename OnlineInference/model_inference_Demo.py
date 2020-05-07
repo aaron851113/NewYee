@@ -23,17 +23,7 @@ from src.model_inference_ObjectDetect_Elanet import detect
 from src.model_inference_Segmentation_noplot import evaluateModel, evaluateModel_models
 from src.fun_plotfunction import  plot_ROI, plot_bbox_Violation, plot_bbox
 from src.fun_modify_seg import fun_intergate_seg_LaneandRoad
-from src.violation_demo import save_violation, createFolder
-
-"""
-#################### 載入偵測車牌charnet的cfg&Model #######################
-cfg.merge_from_file("./configs/icdar2015_hourglass88.yaml")
-cfg.freeze()
-charnet = CharNet()
-charnet.load_state_dict(torch.load(cfg.WEIGHT))
-charnet.eval()
-#################### 載入偵測車牌charnet的cfg&Model #######################
-"""
+from src.violation_demo import save_violation, createFolder, match_bbox_tracker
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,14 +33,14 @@ filepath_model_seg_LaneLine = './models/ESPNet_Line_mytransfrom_full_256_512_wei
 filepath_model_seg_road = './models/ESPNet_road_mytransfrom_full_256_512_weights_epoch_41.pth'
 # Load Object Detection model
 checkpoint_path = './models/od_NoPretrain/BEST_checkpoint.pth.tar'
-video_path='../../data/(Front)IPCamera_20200305095701_p001.avi'
-savefilename='(Front)IPCamera_20200305095701_p001'
+video_path='../../data/IPCamera Front_20200320103625.avi'
+savefilename='IPCamera Front_20200320103625'
 
 video_t_start = 0 # unit: second
 video_t_end = 60 # unit: second
 
 #partial_inference_video =[[0,20],[20,40],[40,60]]
-partial_inference_video =[[0,1*60],[1*60, 2*60],[2*60, 3*60]]
+partial_inference_video =[[0,1*60+33],[1*60+33, 2*60],[2*60, 3*60]]
 
 
 Tensor = torch.cuda.FloatTensor
@@ -121,7 +111,7 @@ def fun_load_od_model(checkpoint_path):
     return model_od
 
 def thread_detect(model_od, frame_pil_img, q_detect):
-    _, bboxes = detect(model_od, frame_pil_img, min_score=0.7, max_overlap=0.5, top_k=50,device=device)
+    _, bboxes = detect(model_od, frame_pil_img, min_score=0.75, max_overlap=0.5, top_k=30,device=device)
     q_detect.put(bboxes)
 
 def thread_seg_models(model_seg_road, model_seg_lane ,frame_pil_img, q_sed):
@@ -147,10 +137,11 @@ size = (int(videoCapture1.get(cv2.CAP_PROP_FRAME_WIDTH)/1),
 
 img_stack = []
 bbox_stack = []
+violation_id = 0
 violation_frame = -1
+violation_id_list = []
 c=0
-check_frame = 0 
-vio = False
+tracked_objects=[]
 
 ############################ SORT ######################################
 from src.sort import Sort
@@ -224,27 +215,37 @@ for c_time, tmp_time in enumerate(partial_inference_video):
                 sort_box = torch.tensor(sort_box).cuda()
 
                 tracked_objects = mot_tracker.update(sort_box.cpu())
-                img_allid = []
+                
+                """
                 for x1, y1, x2, y2, obj_id , cls_pred in tracked_objects:
                     cls = vehicle[int(cls_pred)]
                     #print('x1, y1, x2, y2, obj_id :',x1, y1, x2, y2, obj_id)
-                    #img_result = cv2.UMat(img_result)
-                    #cv2.putText(img_result, cls + ":" + str(int(obj_id)),(int(x1+30), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 3)
+                    img_result = cv2.UMat(img_result)
+                    cv2.putText(img_result, cls + ":" + str(int(obj_id)),(int(x1+30), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (100,0,255), 3)
+                """
+            match_bbox = match_bbox_tracker(decision_boxes,tracked_objects)
             ############################ SORT ######################################
                     
             # save img_result
             # 偵測違規
-            if violation_frame == -1 :
-                for i in range(len(decision_boxes)):
-                    if decision_boxes[i]['decision'] != 'pass' :
+            if violation_frame == -1 and c >= frame_num :
+                for match in match_bbox:
+                    if match[0] != 'pass' and match[5] not in violation_id_list :
                         #建立違規資料夾
                         directory = './violation/'+str(c)
                         createFolder(directory)
+                        txt_name = directory + '/' + str(time.ctime()) + '.txt'
+                        fp = open(txt_name, "a")
+                        txt_content = str(match[0])+','+str(match[1])+','+str(match[2])+','+str(match[3])+','+str(match[4])+','+str(match[5])+','+str(match[6])
+                        fp.write(txt_content)
+                        fp.close()
                         violation_frame = c
+                        violation_id = match[5] #id
                         break
 
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
-            violation_frame,img_stack,bbox_stack = save_violation(violation_frame,decision_boxes,img_stack,bbox_stack,img_result,frame_num)
+            violation_frame, violation_id, img_stack, bbox_stack, violation_id_list = save_violation(bbox_stack, match_bbox, violation_frame, violation_id, img_stack, img_result, frame_num, violation_id_list)
+            print('violation_id_list = ',violation_id_list)
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
             
             print('  > track and save time : {}s'.format(time.time() - track_save_time))
