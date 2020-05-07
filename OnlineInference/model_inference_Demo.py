@@ -40,7 +40,7 @@ video_t_start = 0 # unit: second
 video_t_end = 60 # unit: second
 
 #partial_inference_video =[[0,20],[20,40],[40,60]]
-partial_inference_video =[[0,1*60+33],[1*60+33, 2*60],[2*60, 3*60]]
+partial_inference_video =[[0,1*60+30],[1*60+31, 2*60],[2*60, 3*60]]
 
 
 Tensor = torch.cuda.FloatTensor
@@ -111,7 +111,7 @@ def fun_load_od_model(checkpoint_path):
     return model_od
 
 def thread_detect(model_od, frame_pil_img, q_detect):
-    _, bboxes = detect(model_od, frame_pil_img, min_score=0.75, max_overlap=0.5, top_k=30,device=device)
+    _, bboxes = detect(model_od, frame_pil_img, min_score=0.75, max_overlap=0.5, top_k=40,device=device)
     q_detect.put(bboxes)
 
 def thread_seg_models(model_seg_road, model_seg_lane ,frame_pil_img, q_sed):
@@ -245,7 +245,7 @@ for c_time, tmp_time in enumerate(partial_inference_video):
 
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
             violation_frame, violation_id, img_stack, bbox_stack, violation_id_list = save_violation(bbox_stack, match_bbox, violation_frame, violation_id, img_stack, img_result, frame_num, violation_id_list)
-            print('violation_id_list = ',violation_id_list)
+            #print('violation_id_list = ',violation_id_list)
             ################## 存取違規的frame前後區間 並進行車牌辨識 ##########################
             
             print('  > track and save time : {}s'.format(time.time() - track_save_time))
