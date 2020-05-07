@@ -337,7 +337,7 @@ def fun_detection_TrafficViolation(img, bboxes, map_seg_label_line, map_seg_labe
                 
                 
                 # 開始判斷準則
-                if (n_sw>10) & (n_red_line<100):
+                if (n_sw>10) & (n_sw<400) & (n_red_line<100):
                     '''
                     物件框的人行道pixel如果大於10個(預設可以調整)
                     且紅線小於100個(預設可以調整)，就是人行道違停
@@ -365,12 +365,26 @@ def fun_detection_TrafficViolation(img, bboxes, map_seg_label_line, map_seg_labe
                     decision_box['decision'] = 'pass'
                     decision_box['bbox'] = bbox
                     img_result = plot_bbox(img_result, bbox)
+
+                ### 將大車違規與汽機車違規rule分開
+                # 汽機車rule
                 elif (((n_red_line > n_car_line) | (n_red_line > n_motor_line)) & (n_red_line>n_white_line)&(n_red_line > n_mstop_line)) & (n_red_line>=10) &\
-                     ((object_label=='b') | (object_label=='t') | (object_label=='m') | (object_label=='c')):
+                     ((object_label=='m') | (object_label=='c')):
                     '''
                     (紅線pixel數量 > 汽車線停車線的pixel數量) 或是 (紅線pixel數量 > 機車線停車線的pixel數量)
                     且
-                    物件為b(大車)或t(卡車)或m(機車上無人)或是c(汽車)
+                    物件m(機車上無人)或是c(汽車)
+                    就是紅線違停
+                    '''
+                    decision_box['decision'] = 'Violation_parking_in_redline'
+                    decision_box['bbox'] = bbox
+                    img_result = plot_bbox_Violation(img_result, bbox,(255,0,0))
+                # 大車rule
+                elif ((n_red_line > n_car_line)  & (n_white_line<=20)) & (n_red_line>=15) & ((object_label=='b') | (object_label=='t')):
+                    '''
+                    (紅線pixel數量 > 汽車線停車線的pixel數量) 或是 (紅線pixel數量 > 機車線停車線的pixel數量)
+                    且
+                    物件為b(大車)或t(卡車)
                     就是紅線違停
                     '''
                     decision_box['decision'] = 'Violation_parking_in_redline'
@@ -414,3 +428,16 @@ def fun_detection_TrafficViolation(img, bboxes, map_seg_label_line, map_seg_labe
     
     
     
+"""
+elif (((n_red_line > n_car_line) | (n_red_line > n_motor_line)) & (n_red_line>n_white_line)&(n_red_line > n_mstop_line)) & (n_red_line>=10) &\
+((object_label=='b') | (object_label=='t') | (object_label=='m') | (object_label=='c')):
+'''
+(紅線pixel數量 > 汽車線停車線的pixel數量) 或是 (紅線pixel數量 > 機車線停車線的pixel數量)
+且
+物件為b(大車)或t(卡車)或m(機車上無人)或是c(汽車)
+就是紅線違停
+'''
+decision_box['decision'] = 'Violation_parking_in_redline'
+decision_box['bbox'] = bbox
+img_result = plot_bbox_Violation(img_result, bbox,(255,0,0))
+                """
