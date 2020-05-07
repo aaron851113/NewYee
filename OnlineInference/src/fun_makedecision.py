@@ -290,6 +290,8 @@ def fun_detection_TrafficViolation(img, bboxes, map_seg_label_line, map_seg_labe
             bbox_axis[3] = int(bbox_axis[3]+bbox_h*0.2)
         if (object_label=='t'):
             bbox_axis[3] = int(bbox_axis[3]+bbox_h*0.2)
+        if (object_label=='t' or object_label=='b'):
+            bbox_axis*=0.9
         if bbox_axis[3]>=h_img: bbox_axis[3]=h_img-1
         bbox_x, bbox_y, bbox_w, bbox_h = fun_box2hw(bbox_axis)
     
