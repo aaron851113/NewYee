@@ -38,11 +38,11 @@ def plot_line(img, linears_formula,  color):
     return img
 
 def plot_bbox(img, bbox):
-    label = bbox['label']
-    x_min, y_min, x_max, y_max = bbox['points']
+    #label = bbox['label']
+    #x_min, y_min, x_max, y_max = bbox['points']
     
-    cv2.rectangle(img, (x_min, y_min), (x_max, y_max ), (0,255,0), 3)
-    cv2.putText(img, label, (x_min, y_min), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 5)
+    #cv2.rectangle(img, (x_min, y_min), (x_max, y_max ), (0,255,0), 3)
+    #cv2.putText(img, label, (x_min, y_min), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 5)
     return img
 
 def plot_bbox_Violation(img, bbox, color):
